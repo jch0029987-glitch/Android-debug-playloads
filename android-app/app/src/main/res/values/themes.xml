@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <!-- Default application theme -->
-    <style name="Theme.DebugClient" parent="Theme.Material.Light.NoActionBar">
-        <!-- You can customize colors later -->
-    </style>
-</resources>

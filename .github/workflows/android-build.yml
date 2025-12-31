@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repo
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Set up JDK 17
@@ -20,11 +20,11 @@ jobs:
           distribution: temurin
           java-version: 17
 
-      - name: Install Gradle 8.1.1
+      - name: Install Gradle 8.6
         run: |
-          wget https://services.gradle.org/distributions/gradle-8.1.1-bin.zip -O gradle.zip
+          wget https://services.gradle.org/distributions/gradle-8.6-bin.zip -O gradle.zip
           unzip gradle.zip -d $HOME
-          echo "$HOME/gradle-8.1.1/bin" >> $GITHUB_PATH
+          echo "$HOME/gradle-8.6/bin" >> $GITHUB_PATH
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
@@ -34,7 +34,10 @@ jobs:
 
       - name: Build Debug APK
         working-directory: android-app
-        run: gradle assembleDebug --no-daemon
+        run: |
+          gradle build --stacktrace \
+            -Pandroid.injected.invoked.from.ide=true \
+            -Pandroid.enableJetifier=true
 
       - name: Upload APK
         uses: actions/upload-artifact@v4

@@ -1,36 +1,132 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:orientation="vertical"
-    android:padding="16dp"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp">
 
+    <!-- Connection Status -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="🔗 Termux FastAPI Client"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="16dp"/>
+
+    <!-- Payload Input -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Payload Name:"/>
+    
     <EditText
         android:id="@+id/payloadInput"
-        android:hint="Enter payload name"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"/>
-
-    <Button
-        android:id="@+id/sendPayload"
-        android:text="Send Payload"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"/>
+        android:hint="e.g., scan_network"
+        android:inputType="text"/>
 
-    <Button
-        android:id="@+id/viewCrashLog"
-        android:text="View Crash Log"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"/>
-
+    <!-- Arguments Input -->
     <TextView
-        android:id="@+id/outputView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Arguments (JSON or key=value):"
+        android:layout_marginTop="8dp"/>
+    
+    <EditText
+        android:id="@+id/argsInput"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint='{"target": "192.168.1.1"} or target=192.168.1.1,timeout=5'
+        android:inputType="textMultiLine"
+        android:minLines="2"
+        android:maxLines="3"/>
+
+    <!-- Button Row 1 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="8dp">
+        
+        <Button
+            android:id="@+id/testConnection"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Test Connection"
+            android:layout_marginEnd="4dp"/>
+            
+        <Button
+            android:id="@+id/listPayloads"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="List Payloads"/>
+    </LinearLayout>
+
+    <!-- Button Row 2 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="8dp">
+        
+        <Button
+            android:id="@+id/sendPayload"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Execute Payload"
+            android:layout_marginEnd="4dp"
+            android:textStyle="bold"/>
+            
+        <Button
+            android:id="@+id/viewCrashLog"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="View Logs"/>
+    </LinearLayout>
+
+    <!-- Button Row 3 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="8dp">
+        
+        <Button
+            android:id="@+id/clearLogs"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Clear Logs"/>
+    </LinearLayout>
+
+    <!-- Output Area -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Output:"
+        android:layout_marginTop="16dp"
+        android:textStyle="bold"/>
+    
+    <ScrollView
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:text=""
-        android:layout_marginTop="16dp"
-        android:scrollbars="vertical"/>
+        android:layout_marginTop="8dp">
+        
+        <TextView
+            android:id="@+id/outputView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#f5f5f5"
+            android:padding="12dp"
+            android:text="Ready to connect to Termux FastAPI..."
+            android:textIsSelectable="true"
+            android:typeface="monospace"/>
+    </ScrollView>
+
 </LinearLayout>

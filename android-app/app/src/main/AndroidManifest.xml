@@ -7,8 +7,9 @@
         android:label="Debug Client"
         android:allowBackup="true"
         android:supportsRtl="true"
-        android:theme="@style/Theme.AppCompat.Light.NoActionBar">
-
+        android:usesCleartextTraffic="true"
+        android:theme="@android:style/Theme.Light.NoTitleBar">
+        
         <activity
             android:name=".MainActivity"
             android:exported="true">

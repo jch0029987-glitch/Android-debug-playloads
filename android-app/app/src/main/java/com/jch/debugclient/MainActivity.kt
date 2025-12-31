@@ -14,8 +14,8 @@ import okhttp3.*
 
 class MainActivity : AppCompatActivity() {
 
-    private lateinit var outputView: TextView
-    private lateinit var payloadInput: EditText
+    private var outputView: TextView? = null
+    private var payloadInput: EditText? = null
     private val client = OkHttpClient()
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -33,44 +33,39 @@ class MainActivity : AppCompatActivity() {
 
         setContentView(R.layout.activity_main)
 
+        // Safe view binding
         outputView = findViewById(R.id.outputView)
         payloadInput = findViewById(R.id.payloadInput)
+        val sendButton = findViewById<Button?>(R.id.sendPayload)
+        val viewCrashButton = findViewById<Button?>(R.id.viewCrashLog)
 
-        val sendButton = findViewById<Button>(R.id.sendPayload)
-        val viewCrashButton = findViewById<Button>(R.id.viewCrashLog)
-
-        // Send payload button
-        sendButton.setOnClickListener {
-            val payloadName = payloadInput.text.toString()
-            outputView.text = "Sending payload..."
+        // Check if views exist before setting listeners
+        sendButton?.setOnClickListener {
+            val payloadName = payloadInput?.text.toString()
+            outputView?.text = "Sending payload..."
             sendPayload(payloadName)
         }
 
-        // View crash log button
-        viewCrashButton.setOnClickListener {
+        viewCrashButton?.setOnClickListener {
             val crashFile = File(filesDir, "crash_log.txt")
-            outputView.text = if (crashFile.exists()) crashFile.readText() else "No logs yet"
+            outputView?.text = if (crashFile.exists()) crashFile.readText() else "No logs yet"
         }
     }
 
-    // Append events to crash_log.txt
     private fun logEvent(message: String, context: MainActivity) {
         try {
             val crashFile = File(context.filesDir, "crash_log.txt")
             crashFile.appendText("${System.currentTimeMillis()}: $message\n")
-        } catch (_: Exception) {
-            // Fail silently
-        }
+        } catch (_: Exception) {}
     }
 
-    // Send payload asynchronously
     private fun sendPayload(payloadName: String) {
         val requestBody = FormBody.Builder()
             .add("payload", payloadName)
             .build()
 
         val request = Request.Builder()
-            .url("http://127.0.0.1:8080/payloads/run") // Termux server URL
+            .url("http://127.0.0.1:8080/payloads/run")
             .post(requestBody)
             .build()
 
@@ -78,7 +73,7 @@ class MainActivity : AppCompatActivity() {
             override fun onFailure(call: Call, e: IOException) {
                 logEvent("NETWORK ERROR: ${e.message}", this@MainActivity)
                 runOnUiThread {
-                    outputView.text = "Server not reachable: ${e.message}"
+                    outputView?.text = "Server not reachable: ${e.message}"
                 }
             }
 
@@ -86,7 +81,7 @@ class MainActivity : AppCompatActivity() {
                 val respText = response.body?.string() ?: "Empty response"
                 logEvent("Payload '$payloadName' sent, response: $respText", this@MainActivity)
                 runOnUiThread {
-                    outputView.text = respText
+                    outputView?.text = respText
                 }
             }
         })

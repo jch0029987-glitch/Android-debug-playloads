@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout repo
         uses: actions/checkout@v4
 
       - name: Set up JDK 17
@@ -20,11 +20,11 @@ jobs:
           distribution: temurin
           java-version: 17
 
-      - name: Install Gradle 8.6
+      - name: Install Gradle 8.1.1
         run: |
-          wget https://services.gradle.org/distributions/gradle-8.6-bin.zip -O gradle.zip
+          wget https://services.gradle.org/distributions/gradle-8.1.1-bin.zip -O gradle.zip
           unzip gradle.zip -d $HOME
-          echo "$HOME/gradle-8.6/bin" >> $GITHUB_PATH
+          echo "$HOME/gradle-8.1.1/bin" >> $GITHUB_PATH
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3

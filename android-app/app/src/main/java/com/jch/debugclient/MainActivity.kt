@@ -7,9 +7,9 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import java.io.File
+import java.io.IOException
 import java.io.PrintWriter
 import java.io.StringWriter
-import java.io.IOException
 import okhttp3.*
 
 class MainActivity : AppCompatActivity() {
@@ -21,7 +21,7 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Catch uncaught exceptions globally
+        // Catch all uncaught exceptions
         Thread.setDefaultUncaughtExceptionHandler { _, throwable ->
             val sw = StringWriter()
             throwable.printStackTrace(PrintWriter(sw))
@@ -39,38 +39,38 @@ class MainActivity : AppCompatActivity() {
         val sendButton = findViewById<Button>(R.id.sendPayload)
         val viewCrashButton = findViewById<Button>(R.id.viewCrashLog)
 
-        // Button: Send payload safely
+        // Send payload button
         sendButton.setOnClickListener {
             val payloadName = payloadInput.text.toString()
             outputView.text = "Sending payload..."
             sendPayload(payloadName)
         }
 
-        // Button: View crash log
+        // View crash log button
         viewCrashButton.setOnClickListener {
             val crashFile = File(filesDir, "crash_log.txt")
             outputView.text = if (crashFile.exists()) crashFile.readText() else "No logs yet"
         }
     }
 
-    // Function to log events to crash_log.txt
+    // Append events to crash_log.txt
     private fun logEvent(message: String, context: MainActivity) {
         try {
             val crashFile = File(context.filesDir, "crash_log.txt")
             crashFile.appendText("${System.currentTimeMillis()}: $message\n")
-        } catch (e: Exception) {
-            // Fail silently if logging fails
+        } catch (_: Exception) {
+            // Fail silently
         }
     }
 
-    // Safe async network call
+    // Send payload asynchronously
     private fun sendPayload(payloadName: String) {
         val requestBody = FormBody.Builder()
             .add("payload", payloadName)
             .build()
 
         val request = Request.Builder()
-            .url("http://192.168.1.50:8000/payloads/run") // replace with your server URL
+            .url("http://127.0.0.1:8080/payloads/run") // Termux server URL
             .post(requestBody)
             .build()
 

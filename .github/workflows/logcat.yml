@@ -1,53 +1,69 @@
-name: Get ADB Logcat
+name: Build and Get Logs
 
-on: workflow_dispatch  # Manual run only
+on: workflow_dispatch
 
 jobs:
-  get-logs:
+  build-and-log:
     runs-on: ubuntu-latest
     
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
     
+    - name: Setup Java and Android
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+    
     - name: Setup Android SDK
       uses: android-actions/setup-android@v3
     
+    - name: Build with Gradle
+      run: |
+        chmod +x ./gradlew
+        ./gradlew assembleDebug --stacktrace
+    
     - name: Start Emulator
       run: |
-        echo "Starting emulator..."
+        echo "y" | sdkmanager "system-images;android-33;google_apis;x86_64"
+        echo "no" | avdmanager create avd -n test -k "system-images;android-33;google_apis;x86_64"
         emulator -avd test -no-window -no-audio -no-boot-anim &
     
-    - name: Wait for device
+    - name: Wait for emulator
       run: |
         adb wait-for-device
-        echo "Device is ready"
+        echo "Device ready"
         sleep 30
     
-    - name: Install your APK (if exists)
+    - name: Install and run app
       run: |
-        if [ -f "app-debug.apk" ]; then
-          adb install app-debug.apk
-        else
-          echo "No APK found, skipping install"
-        fi
+        APK=$(find . -name "*debug.apk" | head -1)
+        echo "Installing: $APK"
+        adb install "$APK"
+        
+        # Clear logs
+        adb logcat -c
+        
+        # Start app
+        adb shell am start -n "com.jch.debugclient/.MainActivity"
+        sleep 3
     
-    - name: Get Logcat
+    - name: Capture crash logs
       run: |
-        echo "=== LAST 500 LOGCAT LINES ==="
-        adb logcat -d -t 500
+        echo "=== LOGCAT OUTPUT (filtered) ==="
+        adb logcat -d | grep -E "(E/|FATAL|Exception|jch.debugclient)" | tail -200
         
-        echo -e "\n=== ERRORS AND CRASHES ==="
-        adb logcat -d | grep -E "(E/|FATAL|Exception|CRASH)" | tail -100
+        echo -e "\n=== FULL LOGCAT (last 5 seconds) ==="
+        adb logcat -d -T "05-15"  # Last 5 seconds
         
-        echo -e "\n=== YOUR APP LOGS ==="
-        adb logcat -d | grep -i "jch.debugclient\|DebugClient" | tail -100
-        
-        # Save to file
-        adb logcat -d > logcat_dump.txt
+        # Save full log
+        adb logcat -d > full_logcat.txt
     
-    - name: Upload Logs
+    - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: adb-logs
-        path: logcat_dump.txt
+        name: debug-artifacts
+        path: |
+          full_logcat.txt
+          app/build/outputs/apk/debug/*.apk

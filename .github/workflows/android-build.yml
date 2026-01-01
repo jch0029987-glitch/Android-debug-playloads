@@ -24,7 +24,7 @@ jobs:
     - name: Setup Android SDK
       uses: android-actions/setup-android@v3
 
-    - name: Enable KVM
+    - name: Enable KVM (faster emulator)
       run: |
         echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
         sudo udevadm control --reload-rules
@@ -36,14 +36,13 @@ jobs:
         chmod +x ./gradlew
         ./gradlew assembleDebug --stacktrace
 
-    - name: AVD Cache (Speeds up future runs)
+    - name: Cache AVD (speeds up future runs)
       uses: actions/cache@v4
-      id: avd-cache
       with:
         path: ~/.android/avd
-        key: avd-33-google_apis-x86_64-${{ runner.os }}
+        key: avd-33-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
 
-    - name: Run Emulator + Install + Launch + Capture Logs
+    - name: Run Emulator, Install APK, Launch & Get Logs
       uses: reactivecircus/android-emulator-runner@v2
       with:
         api-level: 33
@@ -56,29 +55,29 @@ jobs:
           sleep 20
 
           APK=$(find app/build/outputs/apk/debug -name "*-debug.apk" | head -1)
-          echo "Found and installing: $APK"
+          echo "Installing: $APK"
           adb install "$APK"
 
           adb logcat -c
 
-          echo "Launching app..."
-          adb shell am start -n "com.jch.debugclient/.MainActivity" || echo "Launch failed (maybe crash on start)"
+          echo "Launching com.jch.debugclient.MainActivity"
+          adb shell am start -n "com.jch.debugclient/.MainActivity" || echo "App failed to start (possible crash)"
 
-          echo "Waiting 90 seconds to capture any crash or behavior..."
+          echo "Waiting 90 seconds to capture logs..."
           sleep 90
 
           adb shell am force-stop com.jch.debugclient
 
           adb logcat -d > full_logcat.txt
 
-          echo "=== FILTERED CRASH / ERROR LOGS ==="
-          grep -i -E "(FATAL|AndroidRuntime|Exception|Crash|jch.debugclient)" full_logcat.txt | tail -500 || echo "No crash keywords found"
+          echo "=== CRASH/ERROR LOGS ==="
+          grep -i -E "(FATAL|AndroidRuntime|Exception|jch.debugclient|Crash)" full_logcat.txt | tail -500 || echo "No obvious crash found"
 
-    - name: Upload APK and Full Logs
+    - name: Upload APK + Full Logs
       if: always()
       uses: actions/upload-artifact@v4
       with:
-        name: apk-and-full-logs
+        name: apk-and-logs
         path: |
           android-app/app/build/outputs/apk/debug/app-debug.apk
           android-app/full_logcat.txt

@@ -1,11 +1,13 @@
-name: Build and Get Logs
+name: Build Debug APK
 
-on: workflow_dispatch
+on:
+  workflow_dispatch
+  push:
+    branches: [ "main" ]
 
 jobs:
-  build-and-log:
+  build:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
 
     defaults:
       run:
@@ -24,60 +26,22 @@ jobs:
     - name: Setup Android SDK
       uses: android-actions/setup-android@v3
 
-    - name: Enable KVM (faster emulator)
-      run: |
-        echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
-        sudo udevadm control --reload-rules
-        sudo udevadm trigger --name-match=kvm
-
     - name: Build Debug APK
       run: |
-        sed -i 's|distributionUrl=.*|distributionUrl=https://services.gradle.org/distributions/gradle-8.7-bin.zip|g' gradle/wrapper/gradle-wrapper.properties
         chmod +x ./gradlew
-        ./gradlew assembleDebug --stacktrace
+        ./gradlew assembleDebug --stacktrace --info
 
-    - name: Cache AVD (speeds up future runs)
-      uses: actions/cache@v4
+    - name: Upload Debug APK
+      uses: actions/upload-artifact@v4
       with:
-        path: ~/.android/avd
-        key: avd-33-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+        name: DebugClient-debug-apk
+        path: android-app/app/build/outputs/apk/debug/app-debug.apk
 
-    - name: Run Emulator, Install APK, Launch & Get Logs
-      uses: reactivecircus/android-emulator-runner@v2
-      with:
-        api-level: 33
-        target: google_apis
-        arch: x86_64
-        force-avd-creation: false
-        emulator-options: -no-snapshot-save -no-window -no-audio -no-boot-anim
-        script: |
-          adb wait-for-device
-          sleep 20
-
-          APK=$(find app/build/outputs/apk/debug -name "*-debug.apk" | head -1)
-          echo "Installing: $APK"
-          adb install "$APK"
-
-          adb logcat -c
-
-          echo "Launching com.jch.debugclient.MainActivity"
-          adb shell am start -n "com.jch.debugclient/.MainActivity" || echo "App failed to start (possible crash)"
-
-          echo "Waiting 90 seconds to capture logs..."
-          sleep 90
-
-          adb shell am force-stop com.jch.debugclient
-
-          adb logcat -d > full_logcat.txt
-
-          echo "=== CRASH/ERROR LOGS ==="
-          grep -i -E "(FATAL|AndroidRuntime|Exception|jch.debugclient|Crash)" full_logcat.txt | tail -500 || echo "No obvious crash found"
-
-    - name: Upload APK + Full Logs
+    - name: Upload Build Reports (optional, helpful on failure)
       if: always()
       uses: actions/upload-artifact@v4
       with:
-        name: apk-and-logs
+        name: Build-Reports
         path: |
-          android-app/app/build/outputs/apk/debug/app-debug.apk
-          android-app/full_logcat.txt
+          android-app/app/build/reports/**
+          android-app/app/build/outputs/logs/**

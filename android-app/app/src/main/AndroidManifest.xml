@@ -8,7 +8,7 @@
         android:allowBackup="true"
         android:supportsRtl="true"
         android:usesCleartextTraffic="true"
-        android:theme="@android:style/Theme.Light.NoTitleBar">
+        android:theme="@style/Theme.AppCompat.Light.NoActionBar"
         
         <activity
             android:name=".MainActivity"

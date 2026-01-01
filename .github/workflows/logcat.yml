@@ -1,0 +1,53 @@
+name: Get ADB Logcat
+
+on: workflow_dispatch  # Manual run only
+
+jobs:
+  get-logs:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v3
+    
+    - name: Start Emulator
+      run: |
+        echo "Starting emulator..."
+        emulator -avd test -no-window -no-audio -no-boot-anim &
+    
+    - name: Wait for device
+      run: |
+        adb wait-for-device
+        echo "Device is ready"
+        sleep 30
+    
+    - name: Install your APK (if exists)
+      run: |
+        if [ -f "app-debug.apk" ]; then
+          adb install app-debug.apk
+        else
+          echo "No APK found, skipping install"
+        fi
+    
+    - name: Get Logcat
+      run: |
+        echo "=== LAST 500 LOGCAT LINES ==="
+        adb logcat -d -t 500
+        
+        echo -e "\n=== ERRORS AND CRASHES ==="
+        adb logcat -d | grep -E "(E/|FATAL|Exception|CRASH)" | tail -100
+        
+        echo -e "\n=== YOUR APP LOGS ==="
+        adb logcat -d | grep -i "jch.debugclient\|DebugClient" | tail -100
+        
+        # Save to file
+        adb logcat -d > logcat_dump.txt
+    
+    - name: Upload Logs
+      uses: actions/upload-artifact@v4
+      with:
+        name: adb-logs
+        path: logcat_dump.txt

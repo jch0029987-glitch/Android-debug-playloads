@@ -1,6 +1,6 @@
 name: Build and Get Logs
 
-on: workflow_dispatch   # Keep manual trigger for debugging crashes
+on: workflow_dispatch
 
 jobs:
   build-and-log:
@@ -9,7 +9,7 @@ jobs:
 
     defaults:
       run:
-        working-directory: android-app   # All steps run inside your project folder
+        working-directory: android-app
 
     steps:
     - name: Checkout code
@@ -24,59 +24,56 @@ jobs:
     - name: Setup Android SDK
       uses: android-actions/setup-android@v3
 
-    # Use your existing Gradle wrapper — it's already in android-app!
+    - name: Enable KVM for faster emulator
+      run: |
+        echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+        sudo udevadm control --reload-rules
+        sudo udevadm trigger --name-match=kvm
+        ls -l /dev/kvm
+
     - name: Build Debug APK
       run: |
+        sed -i 's|distributionUrl=.*|distributionUrl=https://services.gradle.org/distributions/gradle-8.7-bin.zip|g' gradle/wrapper/gradle-wrapper.properties
         chmod +x ./gradlew
         ./gradlew assembleDebug --stacktrace
 
-    - name: Create and Start Emulator
-      run: |
-        echo "y" | sdkmanager "system-images;android-33;google_apis;x86_64"
-        echo "y" | sdkmanager "platforms;android-33"
-        echo "no" | avdmanager create avd -n test_emulator -k "system-images;android-33;google_apis;x86_64" --force
-        $ANDROID_HOME/emulator/emulator -avd test_emulator -no-window -no-audio -no-boot-anim -no-snapshot-save &
+    - name: Run Emulator, Install, Launch & Capture Logs
+      uses: reactivecircus/android-emulator-runner@v2
+      with:
+        api-level: 33
+        target: google_apis
+        arch: x86_64
+        cores: 4
+        ram-size: 4096M
+        force-avd-creation: false
+        emulator-options: -no-snapshot-save -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect
+        script: |
+          adb wait-for-device
+          sleep 15
 
-    - name: Wait for Emulator Boot
-      run: |
-        adb wait-for-device shell 'while [[ -z $(getprop sys.boot_completed) ]]; do sleep 5; done'
-        sleep 20
-        echo "Emulator ready"
+          APK=$(find app/build/outputs/apk/debug -name "*-debug.apk" | head -1)
+          echo "Installing $APK"
+          adb install "$APK"
 
-    - name: Install APK
-      run: |
-        APK=$(find app/build/outputs/apk/debug -name "*.apk" | head -1)
-        echo "Installing $APK"
-        adb install "$APK"
+          adb logcat -c
 
-    - name: Clear logcat & start streaming
-      run: |
-        adb logcat -c
-        adb logcat > ../full_logcat.txt 2>&1 &   # Save outside working-dir for easy artifact upload
-        echo $! > ../logcat_pid.txt
+          adb shell am start -n "com.jch.debugclient/.MainActivity" || echo "Launch failed"
 
-    - name: Launch App and Wait
-      run: |
-        adb shell am start -n "com.jch.debugclient/.MainActivity" || true
-        sleep 60
-        adb shell am force-stop com.jch.debugclient
+          echo "Waiting 90 seconds to capture any crash..."
+          sleep 90
 
-    - name: Stop logcat
-      run: |
-        cd ..
-        if [[ -f logcat_pid.txt ]]; then kill $(cat logcat_pid.txt) || true; fi
-        sleep 5
+          adb shell am force-stop com.jch.debugclient
 
-    - name: Show Filtered Logs
-      run: |
-        echo "=== POTENTIAL CRASH LOGS ==="
-        grep -i -E "(FATAL|AndroidRuntime|Exception|jch.debugclient)" full_logcat.txt | tail -300 || echo "No crash found"
+          adb logcat -d > /tmp/full_logcat.txt
+
+          echo "=== CRASH / ERROR LOGS ==="
+          grep -i -E "(FATAL|AndroidRuntime|Exception|Crash|jch.debugclient)" /tmp/full_logcat.txt | tail -400 || echo "No crash detected"
 
     - name: Upload Artifacts
       if: always()
       uses: actions/upload-artifact@v4
       with:
-        name: debug-apk-and-logs
+        name: apk-and-logs
         path: |
           android-app/app/build/outputs/apk/debug/app-debug.apk
-          full_logcat.txt
+          /tmp/full_logcat.txt

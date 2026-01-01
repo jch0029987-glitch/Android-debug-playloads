@@ -1,46 +1,82 @@
-name: Android Debug Build
+name: Build and Get Logs
 
-on:
-  push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
+on: workflow_dispatch   # Keep manual trigger for debugging crashes
 
 jobs:
-  build:
+  build-and-log:
     runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    defaults:
+      run:
+        working-directory: android-app   # All steps run inside your project folder
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
 
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: 17
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '17'
 
-      - name: Install Gradle 8.6
-        run: |
-          wget https://services.gradle.org/distributions/gradle-8.6-bin.zip -O gradle.zip
-          unzip gradle.zip -d $HOME
-          echo "$HOME/gradle-8.6/bin" >> $GITHUB_PATH
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v3
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-        with:
-          api-level: 34
-          build-tools: 34.0.0
+    # Use your existing Gradle wrapper — it's already in android-app!
+    - name: Build Debug APK
+      run: |
+        chmod +x ./gradlew
+        ./gradlew assembleDebug --stacktrace
 
-      - name: Build Debug APK
-        working-directory: android-app
-        run: |
-          gradle build --stacktrace \
-            -Pandroid.injected.invoked.from.ide=true \
-            -Pandroid.enableJetifier=true
+    - name: Create and Start Emulator
+      run: |
+        echo "y" | sdkmanager "system-images;android-33;google_apis;x86_64"
+        echo "y" | sdkmanager "platforms;android-33"
+        echo "no" | avdmanager create avd -n test_emulator -k "system-images;android-33;google_apis;x86_64" --force
+        $ANDROID_HOME/emulator/emulator -avd test_emulator -no-window -no-audio -no-boot-anim -no-snapshot-save &
 
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: DebugClient-debug-apk
-          path: android-app/app/build/outputs/apk/debug/*.apk
+    - name: Wait for Emulator Boot
+      run: |
+        adb wait-for-device shell 'while [[ -z $(getprop sys.boot_completed) ]]; do sleep 5; done'
+        sleep 20
+        echo "Emulator ready"
+
+    - name: Install APK
+      run: |
+        APK=$(find app/build/outputs/apk/debug -name "*.apk" | head -1)
+        echo "Installing $APK"
+        adb install "$APK"
+
+    - name: Clear logcat & start streaming
+      run: |
+        adb logcat -c
+        adb logcat > ../full_logcat.txt 2>&1 &   # Save outside working-dir for easy artifact upload
+        echo $! > ../logcat_pid.txt
+
+    - name: Launch App and Wait
+      run: |
+        adb shell am start -n "com.jch.debugclient/.MainActivity" || true
+        sleep 60
+        adb shell am force-stop com.jch.debugclient
+
+    - name: Stop logcat
+      run: |
+        cd ..
+        if [[ -f logcat_pid.txt ]]; then kill $(cat logcat_pid.txt) || true; fi
+        sleep 5
+
+    - name: Show Filtered Logs
+      run: |
+        echo "=== POTENTIAL CRASH LOGS ==="
+        grep -i -E "(FATAL|AndroidRuntime|Exception|jch.debugclient)" full_logcat.txt | tail -300 || echo "No crash found"
+
+    - name: Upload Artifacts
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: debug-apk-and-logs
+        path: |
+          android-app/app/build/outputs/apk/debug/app-debug.apk
+          full_logcat.txt

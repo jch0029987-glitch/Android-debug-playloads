@@ -21,15 +21,12 @@ class MainActivity : AppCompatActivity() {
         setupCrashHandler()
         setContentView(R.layout.activity_main)
 
-        // Initialize views
         outputView = findViewById(R.id.outputView)
         payloadInput = findViewById(R.id.payloadInput)
         argsInput = findViewById(R.id.argsInput)
 
-        // Make output scrollable
         outputView.movementMethod = ScrollingMovementMethod()
 
-        // Setup buttons
         findViewById<Button>(R.id.sendPayload).setOnClickListener {
             executePayload()
         }
@@ -50,21 +47,18 @@ class MainActivity : AppCompatActivity() {
             clearLogs()
         }
 
-        // Auto-test connection on startup
         testConnection()
     }
 
     private fun setupCrashHandler() {
         val defaultHandler = Thread.getDefaultUncaughtExceptionHandler()
-
         Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
             try {
                 val sw = StringWriter()
                 throwable.printStackTrace(PrintWriter(sw))
-                val crashFile = File(filesDir, "crash_log.txt")
-                crashFile.appendText("\n=== CRASH ${Date()} ===\n${sw.toString()}\n\n")
+                File(filesDir, "crash_log.txt")
+                    .appendText("\n=== CRASH ${Date()} ===\n$sw\n")
             } catch (_: Exception) {}
-
             defaultHandler?.uncaughtException(thread, throwable)
         }
     }
@@ -73,31 +67,17 @@ class MainActivity : AppCompatActivity() {
         showOutput("🔌 Testing FastAPI connection...")
         ApiClient.testConnection { success, message ->
             runOnUiThread {
-                if (success) {
-                    showOutput("✅ $message")
-                    // Auto-list payloads after successful connection
-                    listPayloads()
-                } else {
-                    showOutput("""
-                        ❌ $message
-
-                        Start Termux and run:
-                        cd ~/your-fastapi-project
-                        uvicorn main:app --host 0.0.0.0 --port 8000
-
-                        Then refresh connection.
-                    """.trimIndent())
-                }
+                showOutput(message)
+                if (success) listPayloads()
             }
         }
     }
 
     private fun listPayloads() {
-        showOutput("📦 Loading available payloads...")
+        showOutput("📦 Fetching payload list...")
         ApiClient.listPayloads { result ->
             runOnUiThread {
                 showOutput(result)
-                logEvent("Listed payloads")
             }
         }
     }
@@ -105,108 +85,57 @@ class MainActivity : AppCompatActivity() {
     private fun executePayload() {
         val payloadName = payloadInput.text.toString().trim()
         if (payloadName.isEmpty()) {
-            showOutput("⚠️ Please enter a payload name")
+            showOutput("⚠️ Enter a payload name")
             return
         }
 
-        val argsText = argsInput.text.toString().trim()
-        val args = parseArgs(argsText)
+        val args = parseArgs(argsInput.text.toString())
 
-        showOutput("🚀 Executing: $payloadName")
-        if (args.isNotEmpty()) {
-            showOutput("⚙️ Args: $args")
-        }
+        showOutput("🚀 Executing payload: $payloadName")
 
-        // Updated callback to single parameter
         ApiClient.executePayload(payloadName, args) { result ->
             runOnUiThread {
                 showOutput(result)
-                logEvent("Executed payload: $payloadName\nResult: $result")
             }
         }
     }
 
-    private fun parseArgs(argsText: String): Map<String, Any> {
-        val args = mutableMapOf<String, Any>()
-        if (argsText.isBlank()) return args
+    private fun parseArgs(text: String): Map<String, Any> {
+        if (text.isBlank()) return emptyMap()
 
-        try {
-            // Try parsing as JSON
-            if (argsText.trim().startsWith("{")) {
-                val json = org.json.JSONObject(argsText)
-                for (key in json.keys()) {
-                    args[key] = json.get(key)
-                }
-            } else {
-                // Parse as key=value pairs
-                argsText.split(",").forEach { pair ->
-                    val parts = pair.trim().split("=")
-                    if (parts.size == 2) {
-                        val key = parts[0].trim()
-                        val value = parts[1].trim()
-
-                        // Try to parse as number
-                        when {
-                            value.toIntOrNull() != null -> args[key] = value.toInt()
-                            value.toDoubleOrNull() != null -> args[key] = value.toDouble()
-                            value == "true" || value == "false" -> args[key] = value.toBoolean()
-                            else -> args[key] = value
-                        }
-                    }
-                }
+        return try {
+            val json = org.json.JSONObject(text)
+            val map = mutableMapOf<String, Any>()
+            for (key in json.keys()) {
+                map[key] = json.get(key)
             }
-        } catch (e: Exception) {
-            showOutput("⚠️ Could not parse args: ${e.message}\nUsing empty args.")
+            map
+        } catch (_: Exception) {
+            emptyMap()
         }
-
-        return args
     }
 
     private fun viewCrashLog() {
-        try {
-            val crashFile = File(filesDir, "crash_log.txt")
-            val text = if (crashFile.exists() && crashFile.length() > 0) {
-                crashFile.readText()
-            } else {
-                "📭 No crash logs found."
-            }
-            showOutput("📋 Crash Log:\n\n$text")
-        } catch (e: Exception) {
-            showOutput("❌ Error reading logs: ${e.message}")
-        }
+        val file = File(filesDir, "crash_log.txt")
+        showOutput(
+            if (file.exists() && file.length() > 0)
+                file.readText()
+            else
+                "📭 No crash logs"
+        )
     }
 
     private fun clearLogs() {
-        try {
-            val crashFile = File(filesDir, "crash_log.txt")
-            if (crashFile.exists()) {
-                crashFile.writeText("")  // Clear file
-                showOutput("🧹 Logs cleared")
-            } else {
-                showOutput("📭 No logs to clear")
-            }
-        } catch (e: Exception) {
-            showOutput("❌ Error clearing logs: ${e.message}")
-        }
+        File(filesDir, "crash_log.txt").writeText("")
+        showOutput("🧹 Logs cleared")
     }
 
     private fun showOutput(text: String) {
         outputView.text = text
-        // Auto-scroll to bottom
         outputView.post {
-            val scrollAmount = outputView.layout.getLineTop(outputView.lineCount) - outputView.height
-            if (scrollAmount > 0) {
-                outputView.scrollTo(0, scrollAmount)
-            } else {
-                outputView.scrollTo(0, 0)
-            }
+            val scroll =
+                outputView.layout.getLineTop(outputView.lineCount) - outputView.height
+            outputView.scrollTo(0, maxOf(scroll, 0))
         }
-    }
-
-    private fun logEvent(message: String) {
-        try {
-            val logFile = File(filesDir, "activity_log.txt")
-            logFile.appendText("${Date()}: $message\n\n")
-        } catch (_: Exception) {}
     }
 }

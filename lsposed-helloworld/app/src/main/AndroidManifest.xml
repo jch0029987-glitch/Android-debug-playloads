@@ -6,7 +6,7 @@
         android:description="@string/module_description"
         android:allowBackup="true">
 
-        <!-- No activities needed for hello world -->
+        <!-- No activities or meta-data needed for simple module -->
 
     </application>
 

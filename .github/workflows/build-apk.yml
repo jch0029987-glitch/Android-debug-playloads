@@ -1,18 +1,18 @@
-
 name: Build LSPosed Module APK
 
 on:
   push:
-    branches: [ lsposed-helloworld ]
+    branches: [ lsposed-helloworld-branch ]  # Change if your branch name differs
   pull_request:
-    branches: [ lsposed-helloworld ]
+    branches: [ lsposed-helloworld-branch ]
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
         with:
           submodules: recursive
 
@@ -22,7 +22,10 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Grant execute permission for gradlew
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Make gradlew executable
         run: chmod +x gradlew
 
       - name: Build debug APK
@@ -33,4 +36,3 @@ jobs:
         with:
           name: LSPosed-HelloWorld-Debug-APK
           path: app/build/outputs/apk/debug/app-debug.apk
-~/android-debug-payloads/lsposed-helloworld

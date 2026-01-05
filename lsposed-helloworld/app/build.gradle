@@ -27,6 +27,6 @@ android {
 }
 
 dependencies {
-    compileOnly project(':libxposed-api')
-    implementation project(':libxposed-helper')
+    compileOnly files('libs/api.aar')
+    implementation files('libs/helper.aar')
 }

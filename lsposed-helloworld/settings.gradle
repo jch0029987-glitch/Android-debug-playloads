@@ -1,3 +1,6 @@
-include ':app', ':libxposed-api', ':libxposed-helper'
-project(':libxposed-api').projectDir = file('libxposed-api')
-project(':libxposed-helper').projectDir = file('libxposed-helper')
+include ':app'
+include ':libxposed-api:api'
+include ':libxposed-helper:helper'
+
+project(':libxposed-api:api').projectDir = file('libxposed-api/api')
+project(':libxposed-helper:helper').projectDir = file('libxposed-helper/helper')

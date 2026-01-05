@@ -1,7 +1,5 @@
-plugins {
-    apply plugin: 'com.android.application'
-apply plugin: 'org.jetbrains.kotlin.android' // Remove if pure Java
-}
+apply plugin: 'com.android.application'
+apply plugin: 'org.jetbrains.kotlin.android'
 
 android {
     namespace 'com.jch.lposed'
@@ -24,9 +22,13 @@ android {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
+    kotlinOptions {
+        jvmTarget = '17'
+    }
 }
 
 dependencies {
     compileOnly files('libs/api.aar')
     implementation files('libs/helper.aar')
+    implementation "org.jetbrains.kotlin:kotlin-stdlib:1.9.22"
 }

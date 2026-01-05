@@ -1,0 +1,6 @@
+[submodule "lsposed-helloworld/libxposed-api"]
+	path = lsposed-helloworld/libxposed-api
+	url = https://github.com/libxposed/api.git
+[submodule "lsposed-helloworld/libxposed-helper"]
+	path = lsposed-helloworld/libxposed-helper
+	url = https://github.com/libxposed/helper.git

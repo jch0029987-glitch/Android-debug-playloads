@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest package="com.jch.lposed">
+
+    <application
+        android:label="@string/app_name"
+        android:description="@string/module_description"
+        android:allowBackup="true">
+
+        <!-- No activities needed for hello world -->
+
+    </application>
+
+</manifest>

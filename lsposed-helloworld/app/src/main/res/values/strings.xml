@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">LSPosed Hello World</string>
+    <string name="module_description">Simple hello world module using modern API (source deps)</string>
+</resources>

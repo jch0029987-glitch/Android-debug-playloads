@@ -15,3 +15,21 @@ allprojects {
         mavenCentral()
     }
 }
+subprojects {
+    afterEvaluate { project ->
+        if (project.plugins.hasPlugin('java-library') || project.plugins.hasPlugin('java')) {
+            project.configurations {
+                api {
+                    outgoing {
+                        attribute(Attribute.of('com.android.build.api.attributes.BuildTypeAttr', String), 'debug')
+                        attribute(Attribute.of('org.jetbrains.kotlin.platform.type', String), 'androidJvm')
+                        attribute(Attribute.of('com.android.build.api.attributes.AgpVersionAttr', String), '8.2.2')
+                    }
+                }
+                implementation {
+                    extendsFrom api
+                }
+            }
+        }
+    }
+}

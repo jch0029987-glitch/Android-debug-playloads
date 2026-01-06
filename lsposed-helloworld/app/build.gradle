@@ -27,7 +27,7 @@ android {
     }
 }
 
-dependencies {
-    compileOnly files('libs/api.aar')
+depedependencies {
+    compileOnly project(':libxposed-api')    
     implementation "org.jetbrains.kotlin:kotlin-stdlib:1.9.22"
 }

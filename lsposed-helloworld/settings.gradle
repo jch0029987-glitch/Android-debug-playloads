@@ -1,2 +1,0 @@
-include ':app', ':libxposed-api:api'
-project(':libxposed-api:api').projectDir = file('libxposed-api/api')

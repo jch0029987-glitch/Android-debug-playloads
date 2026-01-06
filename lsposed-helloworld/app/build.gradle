@@ -27,7 +27,6 @@ android {
     }
 }
 
-depedependencies {
-    compileOnly project(':libxposed-api')    
-    implementation "org.jetbrains.kotlin:kotlin-stdlib:1.9.22"
+dependencies {
+    compileOnly project(':libxposed-api')
 }

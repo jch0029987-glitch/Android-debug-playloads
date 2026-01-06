@@ -1,14 +1,2 @@
-pluginManagement {
-    repositories {
-        google()
-        mavenCentral()
-        gradlePluginPortal()
-    }
-    plugins {
-        id 'com.android.application' version '8.2.2'
-        id 'org.jetbrains.kotlin.android' version '1.9.22'
-    }
-}
-
 include ':app', ':libxposed-api'
 project(':libxposed-api').projectDir = file('libxposed-api')
